@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<script>
+    function MyPromise(executor) {
+        this.value = undefined;
+        this.reason = undefined;
+        this.status = 'pending'; // 默认promise状态是pending
+        let resolve=(value)=> {
+            if (this.status === 'pending') { //保证状态一旦变更，不能再次修改
+                this.value = value
+                this.status = 'resolved' // 成功状态
+            }
+        }
+        let reject=(reason)=> {
+            if (this.status === 'pending') {
+                this.reason = reason
+                this.status = 'rejected' //失败状态
+            }
+        }
+        executor(resolve, reject) // 因为会立即执行这个执行器函数
+    }
+
+    MyPromise.prototype.then = function (onFulfilled, onRejected) {  //prototype 切用箭头函数 绑定的为windows!!
+        if (this.status === 'resolved') {
+            onFulfilled(this.value)
+        }
+        if (this.status === 'rejected') {
+            onRejected(this.reason)
+        }
+    }
+
+    let p = new MyPromise(function (resolve, reject) {
+        console.log('start')
+        resolve('data2')
+    })
+    p.then(
+        (v) => {
+            console.log('success ' + v)
+        },
+        (v) => {
+            console.log('error ' + v)
+        }
+    )
+    console.log('end');
+</script>
+
+</html>

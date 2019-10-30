@@ -1,0 +1,46 @@
+<script>
+function Promise(exector){
+   this.state='padding';
+   this.value='';
+   this.error='';
+
+   let resolve=(value)=>{
+       if(this.state==='padding'){
+           this.state='resolved';
+           this.value=value;
+       }
+   }
+
+   let reject=(error)=>{
+       if(this.state==='padding'){
+           this.state='rejected';
+           this.error=error;
+       }
+   }
+
+   exector(resolve,reject);
+}
+
+Promise.prototype.then=function (resolved,rejected){
+    console.log(this);
+    if(this.state==='resolved'){
+        resolved(this.value);
+    }else if(this.state==='rejected'){
+        rejected(this.error);
+    }
+}
+
+let p = new Promise(function (resolve, reject) {
+        console.log('start')
+        resolve('data2')
+    })
+    p.then(
+        (v) => {
+            console.log('success ' + v)
+        },
+        (v) => {
+            console.log('error ' + v)
+        }
+    )
+    console.log('end');
+</script>
