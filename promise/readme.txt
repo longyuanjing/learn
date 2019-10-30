@@ -86,5 +86,13 @@ new Promise(resolve => {
 
 对于 then 方法返回的 promise 它是没有 resolve 函数的，取而代之只要 then 中回调的代码执行完毕并获得同步返回值，这个 then 返回的 promise 就算被 resolve
 
-同步返回值的意思换句话说，如果 then 中的回调返回了一个 promise，那么 then 返回的 promise 会等待这个 promise 被 resolve 后再 resolve（这句话有点像绕口令哈哈哈～）
+同步返回值的意思换句话说，如果 then 中的回调返回了一个 promise，那么 then 返回的 promise 会等待这个 promise 被 resolve 后再 resolved
+
+
+
+then方法中的两个参数，也就是那所谓的成功回调和失败回调，他们的返回值如何处理？
+以成功回调函数（then中的第一个参数）为例，这个函数返回普通值，也就是常量或者对象，这个值会传递到下一个then中，作为成功的结果。 如果这个函数返回的不是普通值，那么有两种情况。
+非普通值---promise：会根据返回的promise成功还是失败，决定调用下一个then的第一个参数还是第二个参数。
+非普通值---如报错异常：会跑到下一个then中的失败参数中，也就是then中的第二个参数。
+
 
