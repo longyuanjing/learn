@@ -1,46 +1,156 @@
 <!DOCTYPE html>
 <script>
     function MyPromise(executor) {
-        this.value = undefined;
-        this.reason = undefined;
-        this.status = 'pending'; // 默认promise状态是pending
-        let resolve=(value)=> {
-            if (this.status === 'pending') { //保证状态一旦变更，不能再次修改
-                this.value = value
-                this.status = 'resolved' // 成功状态
+        let self = this
+        self.value = undefined
+        self.reason = undefined
+        // 默认promise状态是pending
+        self.status = 'pending'
+        // 用来保存then 方法中，第一个参数
+        self.onResolvedCallbacks = []
+        // 用来保存then 方法中，第二个参数
+        self.onRejectedCallbacks = []
+        function resolve(value) {
+            if (self.status === 'pending') { //保证状态一旦变更，不能再次修改
+                self.value = value
+                self.status = 'resolved' // 成功状态
+                self.onResolvedCallbacks.forEach(fn => {
+                    fn()
+                })
             }
         }
-        let reject=(reason)=> {
-            if (this.status === 'pending') {
-                this.reason = reason
-                this.status = 'rejected' //失败状态
+        function reject(reason) {
+            if (self.status === 'pending') {
+                self.reason = reason
+                self.status = 'rejected' //失败状态
+                self.onRejectedCallbacks.forEach(fn => {
+                    fn()
+                })
             }
         }
         executor(resolve, reject) // 因为会立即执行这个执行器函数
     }
 
-    MyPromise.prototype.then = function (onFulfilled, onRejected) {  //prototype 切用箭头函数 绑定的为windows!!
-        if (this.status === 'resolved') {
-            onFulfilled(this.value)
+    MyPromise.prototype.then = function (onFulfilled, onRejected) {
+        let self = this
+        let promise2 = new MyPromise(function (resolve, reject) {
+            // then 函数的成功回调函数的执行结果 与 promise2的关系
+            if (self.status === 'resolved') {
+                try {
+                    let x = onFulfilled(self.value)
+                    resolvePromise(promise2, x, resolve, reject)
+                } catch (e) {
+                    reject(e)
+                }
+            }
+            if (self.status === 'rejected') {
+                try {
+                    let x = onRejected(self.reason)
+                    resolvePromise(promise2, x, resolve, reject)
+                } catch (e) {
+                    reject(e)
+                }
+            }
+            if (self.status === 'pending') {
+                self.onResolvedCallbacks.push(function () {
+                    try {
+                        let x = onFulfilled(self.value)
+                        resolvePromise(promise2, x, resolve, reject)
+                    } catch (e) {
+                        reject(e)
+                    }
+                })
+                self.onRejectedCallbacks.push(function () {
+                    try {
+                        let x = onRejected(self.reason)
+                        resolvePromise(promise2, x, resolve, reject)
+                    } catch (e) {
+                        reject(e)
+                    }
+                })
+            }
+        })
+        return promise2
+    }
+
+
+
+    function resolvePromise(promise2, x, resolve, reject) {
+        // 循环引用报错
+        if (x === promise2) {
+            // reject报错
+            return reject(new TypeError('Chaining cycle detected for promise'));
         }
-        if (this.status === 'rejected') {
-            onRejected(this.reason)
+        // 防止多次调用
+        let called;
+        // x不是null 且x是对象或者函数
+        if (x != null && (typeof x === 'object' || typeof x === 'function')) {
+            try {
+                // A+规定，声明then = x的then方法
+                let then = x.then;
+                console.log('then',then);
+                // 如果then是函数，就默认是promise了
+                if (typeof then === 'function') {
+                    // 就让then执行 第一个参数是this   后面是成功的回调 和 失败的回调
+                    then.call(x, y => {
+                        // 成功和失败只能调用一个
+                        if (called) return;
+                        called = true;
+                        // resolve的结果依旧是promise 那就继续解析
+                        resolvePromise(promise2, y, resolve, reject);
+                    }, err => {
+                        // 成功和失败只能调用一个
+                        if (called) return;
+                        called = true;
+                        reject(err);// 失败了就失败了
+                    })
+                } else {
+                    resolve(x); // 直接成功即可
+                }
+            } catch (e) {
+                // 也属于失败
+                if (called) return;
+                called = true;
+                // 取then出错了那就不要在继续执行了
+                reject(e);
+            }
+        } else {
+            //如果是普通值 直接resolve
+            resolve(x);
         }
     }
 
     let p = new MyPromise(function (resolve, reject) {
         console.log('start')
-        resolve('data2')
+        setTimeout(function () {
+            resolve('data1')
+        }, 500)
     })
     p.then(
         (v) => {
-            console.log('success ' + v)
+            console.log('success： ' + v);
+            return new MyPromise(function(resolve,reject){
+                resolve('执行了');
+            });
+            // return { a: 100 ,then:function(){
+            //     console.log('执行了');
+            // }} // 3 返回对象
         },
         (v) => {
-            console.log('error ' + v)
+            console.log('error： ' + v)
         }
     )
-    console.log('end');
+        .then(
+            (v) => {
+                console.log('success： ' + v)
+            },
+            (v) => {
+                console.log('error： ' + v)
+            }
+        )
+    console.log('end')
+
+
 </script>
 
 </html>
